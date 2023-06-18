@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workflow-config
+  namespace: {{ .Release.Namespace | quote }}
+data:
+  config.yaml: |
+    namespace: {{ .Release.Namespace }}
+    throttleQPS: 100
+    idleTimeoutMillSeconds: 200000
+    rpcTimeoutMillSeconds: 5000

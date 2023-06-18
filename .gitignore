@@ -27,7 +27,7 @@ output
 *.swo
 *~
 cmd/cmd
-config*.yaml
+config.yaml
 .env
 
 gitconfig
