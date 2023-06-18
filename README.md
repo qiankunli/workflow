@@ -42,7 +42,7 @@ spec:
     - name: step2
       phase: Success
     stepTemplate: 
-      type: random
+      type: random          # random is a implement of step interface
       parameters: 
         sleepSeconds: "20"
 ```
