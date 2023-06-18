@@ -1,0 +1,81 @@
+# Default values for workflow.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+platformConfig:
+  ## Container registry for all images involved in the chart
+  imageRegistry: hub.docker.com
+  ## Container repository for platform components
+  imageRepositoryRelease: qiankunli
+  imageRepositoryLibrary: qiankunli
+  ## Platform-wide image pull policy
+  imagePullPolicy: Always
+#  如果集群已经开启免密组件则不能注入
+#  imagePullSecret: registry
+
+labels: { }
+
+podLabels: { }
+
+podAnnotations: { }
+
+
+replicaCount: 1
+
+## Additional command line arguments
+extraArgs:
+  logtostderr: "false"
+  alsologtostderr: "false"
+  stderrthreshold: ERROR
+
+log:
+  verbosity: 4
+
+resources:
+  limits:
+    cpu: 2
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+podSecurityContext:
+  fsGroup: 65534
+
+securityContext:
+  runAsUser: 65534  # nobody
+  runAsGroup: 65534 # nobody
+
+service:
+  healthzPort: 9440
+  metricsPort: 8081
+  annotations: { }
+  labels: { }
+
+priorityClassName: ""
+
+## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+nodeSelector: { }
+
+## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+tolerations: [ ]
+
+hardAntiAffinity: false
+
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 10
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 10
+  failureThreshold: 3
+  successThreshold: 1
+
+configName: workflow-config
