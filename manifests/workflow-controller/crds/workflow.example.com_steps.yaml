@@ -1,0 +1,154 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.0
+  creationTimestamp: null
+  name: steps.workflow.example.com
+spec:
+  group: workflow.example.com
+  names:
+    kind: Step
+    listKind: StepList
+    plural: steps
+    singular: step
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: step type.
+      jsonPath: .spec.type
+      name: Type
+      type: string
+    - description: 'step phase. '
+      jsonPath: .status.phase
+      name: Phase
+      type: string
+    - description: 'step resource address. '
+      jsonPath: .status.resource.address
+      name: Address
+      type: string
+    - description: 'step resource errorCode. '
+      jsonPath: .status.resource.status
+      name: Status
+      type: string
+    - description: 'CreationTimestamp is a timestamp representing the server time
+        when this object was created. '
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Step is the Schema for the steps API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: StepSpec defines the desired state of Step
+            properties:
+              data:
+                description: Json类型的数据
+                type: string
+              parameters:
+                additionalProperties:
+                  type: string
+                description: Map类型的数据
+                type: object
+              retryPolicy:
+                properties:
+                  rollbackRetryLimit:
+                    default: 3
+                    format: int32
+                    type: integer
+                  rollbackRetryPeriodSeconds:
+                    default: 60
+                    format: int32
+                    type: integer
+                  runRetryLimit:
+                    default: 3
+                    format: int32
+                    type: integer
+                  runRetryPeriodSeconds:
+                    default: 60
+                    format: int32
+                    type: integer
+                type: object
+              rollbackPolicy:
+                default: PreserveOnFailure
+                description: RollbackPolicy
+                enum:
+                - Always
+                - PreserveOnFailure
+                type: string
+              type:
+                type: string
+            type: object
+          status:
+            description: StepStatus defines the observed state of Step
+            properties:
+              latestRollbackRetryAt:
+                format: date-time
+                type: string
+              latestRunRetryAt:
+                format: date-time
+                type: string
+              phase:
+                default: Pending
+                description: StepPhase
+                enum:
+                - Pending
+                - Running
+                - Success
+                - RollingBack
+                - RollBacked
+                - Failed
+                type: string
+              resource:
+                properties:
+                  Name:
+                    type: string
+                  address:
+                    type: string
+                  attributes:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  id:
+                    type: string
+                  status:
+                    type: string
+                type: object
+              rollbackError:
+                type: string
+              rollbackRetryCount:
+                format: int32
+                type: integer
+              runError:
+                type: string
+              runRetryCount:
+                format: int32
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
