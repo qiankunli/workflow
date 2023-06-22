@@ -1,6 +1,6 @@
 ## workflow
 
-A workflow that natively supports rollback.
+A kubernetes workflow that natively supports rollback.
 
 ```
 type Step interface {
