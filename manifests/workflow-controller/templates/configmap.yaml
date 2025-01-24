@@ -9,3 +9,7 @@ data:
     throttleQPS: 100
     idleTimeoutMillSeconds: 200000
     rpcTimeoutMillSeconds: 5000
+    controllerConfig:
+      steps:
+      - kine: "random"
+        qps: 1

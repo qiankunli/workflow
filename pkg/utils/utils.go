@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ToStringP ...
@@ -38,6 +40,18 @@ func FirstNotNull(first, second interface{}) interface{} {
 				return second
 			}
 		}
+		return first
+	}
+	return second
+}
+func FirstNotZeroInt(first, second int) int {
+	if first != 0 {
+		return first
+	}
+	return second
+}
+func FirstNotZeroDuration(first, second metav1.Duration) metav1.Duration {
+	if first.Duration > 0 {
 		return first
 	}
 	return second

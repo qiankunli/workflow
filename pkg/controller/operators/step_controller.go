@@ -8,12 +8,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	"github.com/qiankunli/workflow/pkg/apis/workflow/v1alpha1"
-	"github.com/qiankunli/workflow/pkg/constants"
-	"github.com/qiankunli/workflow/pkg/controller/manager"
-	stepinterface "github.com/qiankunli/workflow/pkg/controller/step"
-	"github.com/qiankunli/workflow/pkg/utils/kube"
-	"github.com/qiankunli/workflow/pkg/utils/mutex"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -29,6 +23,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/qiankunli/workflow/pkg/apis/workflow/v1alpha1"
+	"github.com/qiankunli/workflow/pkg/constants"
+	"github.com/qiankunli/workflow/pkg/controller/manager"
+	stepinterface "github.com/qiankunli/workflow/pkg/controller/step"
+	controlleroptions "github.com/qiankunli/workflow/pkg/options/controller"
+	"github.com/qiankunli/workflow/pkg/utils"
+	"github.com/qiankunli/workflow/pkg/utils/kube"
+	"github.com/qiankunli/workflow/pkg/utils/mutex"
 
 	// 引入example step
 	_ "github.com/qiankunli/workflow/pkg/controller/step/example"
@@ -46,7 +49,7 @@ type stepReconciler struct {
 }
 
 // RegisterStepReconciler ...
-func RegisterStepReconciler(mgr ctrl.Manager, controllerCtx *manager.ControllerContext, stepTypes []string, qps int) error {
+func RegisterStepReconciler(mgr ctrl.Manager, controllerCtx *manager.ControllerContext, stepConfig controlleroptions.StepConfig) error {
 	const name = "step-controller"
 
 	r := &stepReconciler{
@@ -63,12 +66,7 @@ func RegisterStepReconciler(mgr ctrl.Manager, controllerCtx *manager.ControllerC
 		if !ok {
 			return false
 		}
-		for _, stepType := range stepTypes {
-			if stepType == c.Spec.Type {
-				return true
-			}
-		}
-		return false
+		return stepConfig.Kind == c.Spec.Type
 	}
 	stepPredicate := builder.WithPredicates(predicate.Funcs{
 		CreateFunc:  func(e event.CreateEvent) bool { return stepPredicateFn(e.Object) },
@@ -76,14 +74,13 @@ func RegisterStepReconciler(mgr ctrl.Manager, controllerCtx *manager.ControllerC
 		DeleteFunc:  func(e event.DeleteEvent) bool { return stepPredicateFn(e.Object) },
 		GenericFunc: func(e event.GenericEvent) bool { return stepPredicateFn(e.Object) },
 	})
-
 	_, err := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
-			CacheSyncTimeout:        controllerCtx.Config.ControllerConfig.SyncTimeout.Duration,
-			MaxConcurrentReconciles: controllerCtx.Config.ControllerConfig.Concurrency,
+			CacheSyncTimeout:        utils.FirstNotZeroDuration(stepConfig.SyncTimeout, controllerCtx.Config.ControllerConfig.SyncTimeout).Duration,
+			MaxConcurrentReconciles: utils.FirstNotZeroInt(stepConfig.Concurrency, controllerCtx.Config.ControllerConfig.Concurrency),
 			RateLimiter: workqueue.NewMaxOfRateLimiter(
 				workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 1000*time.Second),
-				&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(qps), 100)},
+				&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(stepConfig.Qps), 100)},
 			),
 		}).
 		For(&v1alpha1.Step{}, stepPredicate).
