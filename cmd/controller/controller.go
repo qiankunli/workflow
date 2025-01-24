@@ -114,6 +114,10 @@ func setupReconcilers(mgr ctrl.Manager, controllerContext *manager.ControllerCon
 	if err := operators.RegisterWorkflowReconciler(mgr, controllerContext); err != nil {
 		return err
 	}
+	// register queue controller
+	if err := operators.RegisterQueueReconciler(mgr, controllerContext); err != nil {
+		return err
+	}
 
 	return nil
 }

@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/qiankunli/workflow/pkg/apis/workflow/v1alpha1"
-	"github.com/qiankunli/workflow/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/qiankunli/workflow/pkg/apis/workflow/v1alpha1"
 )
 
 func (r *workflowReconciler) reconcileCreating(ctx context.Context, workflow *v1alpha1.Workflow, steps []v1alpha1.Step) {
-	currentPhase := workflow.Status.Phase
 	// 去重
 	stepSet := make(map[string]bool, 0)
 	for _, s := range steps {
@@ -25,9 +23,6 @@ func (r *workflowReconciler) reconcileCreating(ctx context.Context, workflow *v1
 			return
 		}
 	}
-	workflow.Status.Phase = v1alpha1.WorkflowRunning
-	r.recorder.Eventf(workflow, corev1.EventTypeNormal, v1alpha1.PhaseChangeReason, "'%v' => '%s'",
-		utils.FirstNotNull(currentPhase, v1alpha1.WorkflowPending), workflow.Status.Phase)
 }
 
 func (r *workflowReconciler) createStep(ctx context.Context, workflow *v1alpha1.Workflow, ws v1alpha1.WorkflowStep) error {

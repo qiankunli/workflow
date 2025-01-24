@@ -9,10 +9,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	"github.com/qiankunli/workflow/pkg/apis/workflow/v1alpha1"
-	"github.com/qiankunli/workflow/pkg/constants"
-	"github.com/qiankunli/workflow/pkg/utils/kube"
-	"github.com/qiankunli/workflow/pkg/utils/mutex"
 	corev1 "k8s.io/api/core/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +22,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/qiankunli/workflow/pkg/apis/workflow/v1alpha1"
+	"github.com/qiankunli/workflow/pkg/constants"
+	"github.com/qiankunli/workflow/pkg/utils/kube"
+	"github.com/qiankunli/workflow/pkg/utils/mutex"
 
 	"github.com/qiankunli/workflow/pkg/controller/manager"
 )
@@ -133,13 +134,8 @@ func (r *workflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	if !controllerutil.ContainsFinalizer(workflow, constants.FinalizersWorkflow) {
 		controllerutil.AddFinalizer(workflow, constants.FinalizersWorkflow)
 	}
-
-	if workflow.Status.Phase == "" || workflow.Status.Phase == v1alpha1.WorkflowPending {
-		r.reconcileCreating(ctx, workflow, steps)
-		// 进行态要一会儿再进来看下
-		return ctrl.Result{RequeueAfter: constants.DefaultRequeueDuration}, nil
-	}
 	if workflow.Status.Phase == v1alpha1.WorkflowRunning {
+		r.reconcileCreating(ctx, workflow, steps)
 		r.reconcileRunning(ctx, workflow, steps)
 		// 进行态要一会儿再进来看下
 		return ctrl.Result{RequeueAfter: constants.DefaultRequeueDuration}, nil

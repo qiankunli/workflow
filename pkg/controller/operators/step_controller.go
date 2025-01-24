@@ -50,8 +50,7 @@ type stepReconciler struct {
 
 // RegisterStepReconciler ...
 func RegisterStepReconciler(mgr ctrl.Manager, controllerCtx *manager.ControllerContext, stepConfig controlleroptions.StepConfig) error {
-	const name = "step-controller"
-
+	name := fmt.Sprintf("%s-step-controller", stepConfig.Kind)
 	r := &stepReconciler{
 		client:        mgr.GetClient(),
 		controllerCtx: controllerCtx,
