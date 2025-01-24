@@ -64,6 +64,15 @@ spec:
           spec:
             description: WorkflowSpec defines the desired state of Workflow
             properties:
+              parameters:
+                additionalProperties:
+                  type: string
+                description: Map类型的数据
+                type: object
+              queue:
+                description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                  Important: Run "make" to regenerate code after modifying this file'
+                type: string
               rollbackPolicy:
                 default: PreserveOnFailure
                 description: RollbackPolicy
