@@ -44,7 +44,9 @@ func (r *stepReconciler) runRun(s stepinterface.Step, workflow *v1alpha1.Workflo
 
 	log.V(4).Info("run step run")
 	stepErr := s.Run(workflow, step)
-	step.Status.RunRetryCount++
+	if stepErr != nil && !stepErr.Ignorable() {
+		step.Status.RunRetryCount++
+	}
 	step.Status.LatestRunRetryAt = metav1.Now()
 	if stepErr != nil {
 		log.Error(stepErr, "step run error")

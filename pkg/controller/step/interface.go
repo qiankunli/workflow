@@ -9,10 +9,12 @@ import (
 type StepError interface {
 	Error() string
 	Retryable() bool
+	Ignorable() bool
 }
 type stepError struct {
 	error     error
 	retryable bool
+	ignorable bool
 }
 
 func (s *stepError) Error() string {
@@ -21,11 +23,16 @@ func (s *stepError) Error() string {
 func (s *stepError) Retryable() bool {
 	return s.retryable
 }
+func (s *stepError) Ignorable() bool {
+	return s.ignorable
+}
 
 type codeError struct {
 	code      string
 	message   string
 	retryable bool
+	// 一些错误比如限流，算执行失败，但是可以忽略的，比如限流，不应计入重试次数
+	ignorable bool
 }
 
 func (s *codeError) Error() string {
@@ -34,19 +41,24 @@ func (s *codeError) Error() string {
 func (s *codeError) Retryable() bool {
 	return s.retryable
 }
+func (s *codeError) Ignorable() bool {
+	return s.ignorable
+}
 
-func NewCodeError(code, message string, retryable bool) StepError {
+func NewCodeError(code, message string, retryable, ignorable bool) StepError {
 	return &codeError{
 		code:      code,
 		message:   message,
 		retryable: retryable,
+		ignorable: ignorable,
 	}
 }
 
-func NewStepError(err error, retryable bool) StepError {
+func NewStepError(err error, retryable, ignorable bool) StepError {
 	return &stepError{
 		error:     err,
 		retryable: retryable,
+		ignorable: ignorable,
 	}
 }
 

@@ -3,10 +3,11 @@ package operators
 import (
 	"context"
 
-	"github.com/qiankunli/workflow/pkg/apis/workflow/v1alpha1"
-	stepinterface "github.com/qiankunli/workflow/pkg/controller/step"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/qiankunli/workflow/pkg/apis/workflow/v1alpha1"
+	stepinterface "github.com/qiankunli/workflow/pkg/controller/step"
 )
 
 func (r *stepReconciler) reconcileRollback(_ context.Context, workflow *v1alpha1.Workflow, step *v1alpha1.Step) {
@@ -37,7 +38,9 @@ func (r *stepReconciler) runRollback(s stepinterface.Step, workflow *v1alpha1.Wo
 	currentPhase := step.Status.Phase
 	log.V(4).Info("run step rollback")
 	stepErr := s.Rollback(workflow, step)
-	step.Status.RollbackRetryCount++
+	if stepErr != nil && !stepErr.Ignorable() {
+		step.Status.RollbackRetryCount++
+	}
 	step.Status.LatestRollbackRetryAt = metav1.Now()
 	if stepErr != nil {
 		log.Error(stepErr, "step rollback error")

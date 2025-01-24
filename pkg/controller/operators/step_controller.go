@@ -3,6 +3,7 @@ package operators
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"runtime/debug"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	k8sutilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
@@ -145,6 +147,8 @@ func (r *stepReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res c
 			r.StepMutex.DelMutex(lockKey)
 			return ctrl.Result{}, nil
 		}
+		// 一般走不到这里，走到这里，step.status为回滚失败 或 回滚中
+		// step DeletionTimestamp 不为空时，workflow 查不到，step reconcile 依靠workflow的也无法继续，crd 只能残留，依靠手动处理
 		return ctrl.Result{RequeueAfter: constants.DefaultRequeueDuration}, nil
 	}
 
@@ -203,10 +207,22 @@ func (r *stepReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res c
 		// 成功则进入RollBacked
 		return ctrl.Result{}, nil
 	}
-	if step.Status.Phase == v1alpha1.StepSuccess {
+	if step.Spec.SyncPeriodSeconds > 0 && step.Status.Phase == v1alpha1.StepSuccess {
+		// SyncPeriodSeconds 的初衷是保证sync 的执行间隔，为了防止sync 操作太过频繁
+		needWaitDuration := time.Duration(step.Spec.SyncPeriodSeconds) * time.Second
+		if !step.Status.LatestSyncAt.IsZero() {
+			nextSyncAt := step.Status.LatestSyncAt.Time.Add(needWaitDuration)
+			needWaitDuration = time.Until(nextSyncAt)
+			// 没到执行时间，但不必很严格
+			if needWaitDuration > 1*time.Second {
+				// 加一点随机时间，防止很多操作都挤在整点整分，或者压测时挤在同一秒，以免有限速、并发问题
+				needWaitDuration += time.Duration(rand.Intn(5)) * 100 * time.Microsecond
+				return ctrl.Result{RequeueAfter: needWaitDuration}, nil
+			}
+		}
 		r.reconcileSync(ctx, workflow, step)
 		// 因为要sync，所以要一会儿再进来看下
-		return ctrl.Result{RequeueAfter: constants.DefaultRequeueDuration}, nil
+		return ctrl.Result{RequeueAfter: needWaitDuration}, nil
 	}
 	return ctrl.Result{}, nil
 }
@@ -228,16 +244,21 @@ func (r *stepReconciler) reconcileSync(_ context.Context, workflow *v1alpha1.Wor
 	s, err := stepinterface.NewStep(r.controllerCtx.Config, workflow, step)
 	if err != nil {
 		log.Error(err, "instantiate step error")
+		step.Status.SyncError = err.Error()
+		step.Status.LatestSyncAt = metav1.Now()
 		return
 	}
+	step.Status.LatestSyncAt = metav1.Now()
 	stepErr := s.Sync(workflow, step)
 	if stepErr != nil {
 		log.Error(stepErr, "step sync error")
-		step.Status.RunError = stepErr.Error()
+		step.Status.SyncError = stepErr.Error()
 		if !stepErr.Retryable() {
 			// 发现不可重试的错误，立即触发回滚
 			step.Status.Phase = v1alpha1.StepRollingBack
 			r.recorder.Eventf(step, corev1.EventTypeNormal, v1alpha1.FailedOrErrorReason, "'%s' => '%s',sync error: %v", currentPhase, v1alpha1.StepRollingBack, stepErr)
 		}
+	} else {
+		step.Status.SyncError = ""
 	}
 }
