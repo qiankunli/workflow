@@ -157,6 +157,13 @@ func (in *StepSpec) DeepCopy() *StepSpec {
 func (in *StepStatus) DeepCopyInto(out *StepStatus) {
 	*out = *in
 	in.Resource.DeepCopyInto(&out.Resource)
+	if in.Attributes != nil {
+		in, out := &in.Attributes, &out.Attributes
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	in.LatestRunRetryAt.DeepCopyInto(&out.LatestRunRetryAt)
 	in.LatestRollbackRetryAt.DeepCopyInto(&out.LatestRollbackRetryAt)
 	return

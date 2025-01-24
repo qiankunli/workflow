@@ -162,16 +162,6 @@ func (r *stepReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res c
 		log.Error(err, "failed to get workflow", "workflow name", step.Labels["workflow"])
 		return ctrl.Result{}, err
 	}
-	workflowPatchHelper, err := kube.NewHelper(workflow, r.client)
-	if err != nil {
-		log.Error(err, "new workflow patchHelper error")
-		return ctrl.Result{}, err
-	}
-	defer func() {
-		if err := workflowPatchHelper.Patch(ctx, workflow); err != nil {
-			reterr = k8sutilerrors.NewAggregate([]error{reterr, err})
-		}
-	}()
 	log.V(4).Info("step start reconcile", "workflow.Phase", workflow.Status.Phase, "workflow.DeletionTimestamp", workflow.DeletionTimestamp)
 
 	if step.Status.Phase == v1alpha1.StepRunning {

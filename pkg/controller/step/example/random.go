@@ -35,8 +35,6 @@ func (i *Random) Run(workflow *v1alpha1.Workflow, step *v1alpha1.Step) stepinter
 
 	id := fmt.Sprintf("%d", rand.Int())
 	step.Status.Resource.ID = id
-	key := fmt.Sprintf("%s-Run-ID", step.Name)
-	workflow.Status.Attributes[key] = id
 	return nil
 }
 func (i *Random) Rollback(workflow *v1alpha1.Workflow, step *v1alpha1.Step) stepinterface.StepError {
@@ -47,10 +45,6 @@ func (i *Random) Rollback(workflow *v1alpha1.Workflow, step *v1alpha1.Step) step
 	}
 
 	time.Sleep(time.Duration(sleepSeconds) * time.Second)
-
-	id := fmt.Sprintf("%d", rand.Int())
-	key := fmt.Sprintf("%s-Rollback-ID", step.Name)
-	workflow.Status.Attributes[key] = id
 	return nil
 
 }
