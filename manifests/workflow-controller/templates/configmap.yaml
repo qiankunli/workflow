@@ -10,6 +10,9 @@ data:
     idleTimeoutMillSeconds: 200000
     rpcTimeoutMillSeconds: 5000
     controllerConfig:
+      queue:
+        strategy: "FIFO"
+        maxRunningCount: 100
       steps:
       - kine: "random"
         qps: 1

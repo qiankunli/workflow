@@ -19,6 +19,10 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - description: 'workflow queue. '
+      jsonPath: .spec.queue
+      name: Queue
+      type: string
     - description: 'workflow phase. '
       jsonPath: .status.phase
       name: Phase
@@ -70,6 +74,7 @@ spec:
                 description: Map类型的数据
                 type: object
               queue:
+                default: default
                 description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
                   Important: Run "make" to regenerate code after modifying this file'
                 type: string

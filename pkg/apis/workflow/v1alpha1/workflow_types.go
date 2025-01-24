@@ -27,6 +27,7 @@ import (
 type WorkflowSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	// +kubebuilder:default:=default
 	Queue string `json:"queue,omitempty"`
 	// +kubebuilder:default:=PreserveOnFailure
 	RollbackPolicy RollbackPolicy `json:"rollbackPolicy,omitempty"`
@@ -95,6 +96,7 @@ type WorkflowStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kubebuilder:resource:path=workflows,shortName=wf,scope=Namespaced
+// +kubebuilder:printcolumn:name="Queue",type="string",JSONPath=".spec.queue",description="workflow queue. "
 // +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.phase",description="workflow phase. "
 // +kubebuilder:printcolumn:name="RunningSteps",type="integer",JSONPath=".status.stepPhases.Running",description="running step count"
 // +kubebuilder:printcolumn:name="SuccessSteps",type="integer",JSONPath=".status.stepPhases.Success",description="success step count"
