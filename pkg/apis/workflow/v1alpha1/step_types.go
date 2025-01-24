@@ -78,13 +78,15 @@ type StepStatus struct {
 	// +kubebuilder:default:=Pending
 	Phase StepPhase `json:"phase,omitempty"`
 
-	Resource              StepResource `json:"resource,omitempty"`
-	RunRetryCount         int32        `json:"runRetryCount,omitempty"`
-	LatestRunRetryAt      metav1.Time  `json:"latestRunRetryAt,omitempty"`
-	RollbackRetryCount    int32        `json:"rollbackRetryCount,omitempty"`
-	LatestRollbackRetryAt metav1.Time  `json:"latestRollbackRetryAt,omitempty"`
-	RunError              string       `json:"runError,omitempty"`
-	RollbackError         string       `json:"rollbackError,omitempty"`
+	Resource StepResource `json:"resource,omitempty"`
+	// 这里的attributes 将会被合入到workflow 的attributes 中，通过workflow.attributes在多step间传递数据
+	Attributes            map[string]string `json:"attributes,omitempty"`
+	RunRetryCount         int32             `json:"runRetryCount,omitempty"`
+	LatestRunRetryAt      metav1.Time       `json:"latestRunRetryAt,omitempty"`
+	RollbackRetryCount    int32             `json:"rollbackRetryCount,omitempty"`
+	LatestRollbackRetryAt metav1.Time       `json:"latestRollbackRetryAt,omitempty"`
+	RunError              string            `json:"runError,omitempty"`
+	RollbackError         string            `json:"rollbackError,omitempty"`
 }
 
 // Step is the Schema for the steps API

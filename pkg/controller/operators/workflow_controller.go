@@ -157,13 +157,18 @@ func (r *workflowReconciler) aggregateStepStatus(_ context.Context, workflow *v1
 	}
 	count := map[v1alpha1.StepPhase]int{}
 	runErrors := make([]string, 0)
+	stepAttributes := map[string]string{}
 	for _, step := range steps {
 		count[step.Status.Phase]++
 		if len(step.Status.RunError) > 0 {
 			runErrors = append(runErrors, step.Status.RunError)
 		}
+		for k, v := range step.Status.Attributes {
+			stepAttributes[k] = v
+		}
 	}
 	workflow.Status.StepPhases = count
+	workflow.Status.Attributes = stepAttributes
 	if len(runErrors) > 0 {
 		workflow.Status.RunError = strings.Join(runErrors, ";")
 	}

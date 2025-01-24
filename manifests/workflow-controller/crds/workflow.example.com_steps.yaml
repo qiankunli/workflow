@@ -98,6 +98,11 @@ spec:
           status:
             description: StepStatus defines the observed state of Step
             properties:
+              attributes:
+                additionalProperties:
+                  type: string
+                description: 这里的attributes 将会被合入到workflow 的attributes 中，通过workflow.attributes在多step间传递数据
+                type: object
               latestRollbackRetryAt:
                 format: date-time
                 type: string

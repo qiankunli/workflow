@@ -3,10 +3,11 @@ package operators
 import (
 	"context"
 
-	"github.com/qiankunli/workflow/pkg/apis/workflow/v1alpha1"
-	stepinterface "github.com/qiankunli/workflow/pkg/controller/step"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/qiankunli/workflow/pkg/apis/workflow/v1alpha1"
+	stepinterface "github.com/qiankunli/workflow/pkg/controller/step"
 )
 
 func (r *stepReconciler) reconcileRun(_ context.Context, workflow *v1alpha1.Workflow, step *v1alpha1.Step) {
@@ -37,9 +38,6 @@ func (r *stepReconciler) runRun(s stepinterface.Step, workflow *v1alpha1.Workflo
 	currentPhase := step.Status.Phase
 
 	//  准备好以便 step func 使用
-	if workflow.Status.Attributes == nil {
-		workflow.Status.Attributes = map[string]string{}
-	}
 	if step.Status.Resource.Attributes == nil {
 		step.Status.Resource.Attributes = map[string]string{}
 	}
