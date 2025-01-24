@@ -14,5 +14,5 @@ data:
         strategy: "FIFO"
         maxRunningCount: 100
       steps:
-      - kine: "random"
+      - kind: "random"
         qps: 1
