@@ -54,6 +54,7 @@ func (i *Random) Sync(workflow *v1alpha1.Workflow, step *v1alpha1.Step) stepinte
 	if rand.Int()%2 == 0 {
 		id := fmt.Sprintf("%d", rand.Int())
 		step.Status.Resource.ID = id
+		step.Status.Attributes[step.Spec.Type] = id
 	}
 	return nil
 }

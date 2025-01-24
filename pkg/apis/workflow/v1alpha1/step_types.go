@@ -23,7 +23,7 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-type RetryPolicy struct { // 描述该step 依赖其他step的情况
+type RetryPolicy struct { // 描述该step 运行或回滚时的重试情况
 	// +kubebuilder:default:=3
 	RunRetryLimit int32 `json:"runRetryLimit,omitempty"`
 	// +kubebuilder:default:=60
@@ -40,13 +40,14 @@ type StepSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	Type string `json:"type,omitempty"`
-	// Json类型的数据
-	Data string `json:"data,omitempty"`
 	// Map类型的数据
 	Parameters map[string]string `json:"parameters,omitempty"`
 	// +kubebuilder:default:=PreserveOnFailure
 	RollbackPolicy RollbackPolicy `json:"rollbackPolicy,omitempty"`
 	RetryPolicy    RetryPolicy    `json:"retryPolicy,omitempty"`
+	// 小于等于0 表示不进行sync
+	// +kubebuilder:default:=0
+	SyncPeriodSeconds int32 `json:"syncPeriodSeconds,omitempty"`
 }
 
 // StepPhase
@@ -85,8 +86,10 @@ type StepStatus struct {
 	LatestRunRetryAt      metav1.Time       `json:"latestRunRetryAt,omitempty"`
 	RollbackRetryCount    int32             `json:"rollbackRetryCount,omitempty"`
 	LatestRollbackRetryAt metav1.Time       `json:"latestRollbackRetryAt,omitempty"`
+	LatestSyncAt          metav1.Time       `json:"latestSyncAt,omitempty"`
 	RunError              string            `json:"runError,omitempty"`
 	RollbackError         string            `json:"rollbackError,omitempty"`
+	SyncError             string            `json:"syncError,omitempty"`
 }
 
 // Step is the Schema for the steps API

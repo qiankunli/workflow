@@ -2,7 +2,9 @@ package operators
 
 import (
 	"context"
+	"crypto/md5"
 	"fmt"
+	"io"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -124,10 +126,28 @@ func (r *workflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	if !workflow.DeletionTimestamp.IsZero() {
 		log.V(4).Info("workflow deletionTimestamp is not zero", "phase", workflow.Status.Phase)
 		if seeAsRollBackedWorkflow(workflow) {
+			if err = r.onDeleted(ctx, workflow); err != nil {
+				return ctrl.Result{RequeueAfter: constants.DefaultRequeueDuration}, nil
+			}
 			controllerutil.RemoveFinalizer(workflow, constants.FinalizersWorkflow)
 			r.WorkflowMutex.DelMutex(lockKey)
 			return ctrl.Result{}, nil
 		}
+		// 回滚失败
+		if workflow.Status.Phase == v1alpha1.WorkflowFailed {
+			// 回滚失败需要要多次告知vector，用户可能会多次点释放
+			if err = r.onRollback(ctx, workflow); err != nil {
+				return ctrl.Result{RequeueAfter: constants.DefaultRequeueDuration}, nil
+			}
+			// 如果发现运行中、已成功的step，则触发其回滚
+			if workflow.Status.StepPhases[v1alpha1.StepRunning]+workflow.Status.StepPhases[v1alpha1.StepSuccess] > 0 {
+				r.reconcileRollingBack(ctx, workflow, steps)
+				return ctrl.Result{RequeueAfter: constants.DefaultRequeueDuration}, nil
+			}
+			// failed之后，建议人工介入处理，无论wf 还是step 都不会对failed 状态再施加操作，否则逻辑太复杂了
+			return ctrl.Result{}, nil
+		}
+		// 回滚中
 		r.reconcileRollingBack(ctx, workflow, steps)
 		return ctrl.Result{RequeueAfter: constants.DefaultRequeueDuration}, nil
 	}
@@ -137,6 +157,9 @@ func (r *workflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	if workflow.Status.Phase == v1alpha1.WorkflowRunning {
 		r.reconcileCreating(ctx, workflow, steps)
 		r.reconcileRunning(ctx, workflow, steps)
+		if err = r.onStart(ctx, workflow); err != nil {
+			return ctrl.Result{RequeueAfter: constants.DefaultRequeueDuration}, nil
+		}
 		// 进行态要一会儿再进来看下
 		return ctrl.Result{RequeueAfter: constants.DefaultRequeueDuration}, nil
 	}
@@ -145,10 +168,29 @@ func (r *workflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 		// 进行态要一会儿再进来看下
 		return ctrl.Result{RequeueAfter: constants.DefaultRequeueDuration}, nil
 	}
+	if workflow.Status.Phase == v1alpha1.WorkflowFailed || workflow.Status.Phase == v1alpha1.WorkflowRollBacked {
+		// 上报失败状态，如果上报失败，则持续上报
+		if err = r.onRollback(ctx, workflow); err != nil {
+			return ctrl.Result{RequeueAfter: constants.DefaultRequeueDuration}, nil
+		}
+		// 如果发现运行中、已成功的step，则触发其回滚
+		if workflow.Status.StepPhases[v1alpha1.StepRunning]+workflow.Status.StepPhases[v1alpha1.StepSuccess] > 0 {
+			r.reconcileRollingBack(ctx, workflow, steps)
+			// 进行态要一会儿再进来看下
+			return ctrl.Result{RequeueAfter: constants.DefaultRequeueDuration}, nil
+		}
+	}
+	// 静止态，不用触发下次reconcile了
+	if workflow.Status.Phase == v1alpha1.WorkflowSuccess {
+		if err = r.onSuccess(ctx, workflow); err != nil {
+			// 触发callback失败，要一会儿再进来看下
+			return ctrl.Result{RequeueAfter: constants.DefaultRequeueDuration}, nil
+		}
+	}
 	return ctrl.Result{}, nil
 }
 
-func (r *workflowReconciler) aggregateStepStatus(_ context.Context, workflow *v1alpha1.Workflow, steps []v1alpha1.Step) {
+func (r *workflowReconciler) aggregateStepStatus(ctx context.Context, workflow *v1alpha1.Workflow, steps []v1alpha1.Step) {
 	log := r.log.WithValues("name", workflow.Name)
 	currentPhase := workflow.Status.Phase
 	if len(steps) == 0 {
@@ -157,11 +199,19 @@ func (r *workflowReconciler) aggregateStepStatus(_ context.Context, workflow *v1
 	}
 	count := map[v1alpha1.StepPhase]int{}
 	runErrors := make([]string, 0)
+	rollbackErrors := make([]string, 0)
+	syncErrors := make([]string, 0)
 	stepAttributes := map[string]string{}
 	for _, step := range steps {
 		count[step.Status.Phase]++
 		if len(step.Status.RunError) > 0 {
-			runErrors = append(runErrors, step.Status.RunError)
+			runErrors = append(runErrors, fmt.Sprintf("%s:%s", step.Spec.Type, step.Status.RunError))
+		}
+		if len(step.Status.RollbackError) > 0 {
+			rollbackErrors = append(rollbackErrors, fmt.Sprintf("%s:%s", step.Spec.Type, step.Status.RollbackError))
+		}
+		if len(step.Status.SyncError) > 0 {
+			syncErrors = append(syncErrors, fmt.Sprintf("%s:%s", step.Spec.Type, step.Status.SyncError))
 		}
 		for k, v := range step.Status.Attributes {
 			stepAttributes[k] = v
@@ -170,7 +220,19 @@ func (r *workflowReconciler) aggregateStepStatus(_ context.Context, workflow *v1
 	workflow.Status.StepPhases = count
 	workflow.Status.Attributes = stepAttributes
 	if len(runErrors) > 0 {
-		workflow.Status.RunError = strings.Join(runErrors, ";")
+		workflow.Status.RunError = strings.Join(runErrors, "\n")
+	}
+	if len(rollbackErrors) > 0 {
+		workflow.Status.RollbackError = strings.Join(rollbackErrors, "\n")
+	}
+	if len(syncErrors) > 0 {
+		workflow.Status.SyncError = strings.Join(syncErrors, "\n")
+	}
+	// 计算hash 要放在比较靠后的位置
+	statusHash := calStatusHash(workflow)
+	if statusHash != workflow.Status.Hash {
+		// 仅触发一次，不管成功失败，都走下一步流程
+		_ = r.onChange(ctx, workflow)
 	}
 	// 所有step 都成功了，则标记自己为成功
 	if count[v1alpha1.StepSuccess] == len(steps) {
@@ -248,4 +310,19 @@ var seeAsRollingBackWorkflow = func(workflow *v1alpha1.Workflow) bool {
 		return true
 	}
 	return false
+}
+
+var calStatusHash = func(workflow *v1alpha1.Workflow) string {
+	content := string(workflow.Status.Phase)
+	for step, count := range workflow.Status.StepPhases {
+		content += fmt.Sprintf("%s:%d", step, count)
+	}
+	for k, v := range workflow.Status.Attributes {
+		content += fmt.Sprintf("%s:%s", k, v)
+	}
+	h := md5.New()
+	if _, err := io.WriteString(h, content); err != nil {
+		return ""
+	}
+	return fmt.Sprintf("%x", h.Sum(nil))
 }

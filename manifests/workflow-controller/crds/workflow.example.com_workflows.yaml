@@ -68,6 +68,14 @@ spec:
           spec:
             description: WorkflowSpec defines the desired state of Workflow
             properties:
+              callback:
+                properties:
+                  ignoreNotFound:
+                    default: true
+                    type: boolean
+                  url:
+                    type: string
+                type: object
               parameters:
                 additionalProperties:
                   type: string
@@ -114,9 +122,6 @@ spec:
                     stepTemplate:
                       description: StepSpec defines the desired state of Step
                       properties:
-                        data:
-                          description: Json类型的数据
-                          type: string
                         parameters:
                           additionalProperties:
                             type: string
@@ -148,6 +153,11 @@ spec:
                           - Always
                           - PreserveOnFailure
                           type: string
+                        syncPeriodSeconds:
+                          default: 0
+                          description: 小于等于0 表示不进行sync
+                          format: int32
+                          type: integer
                         type:
                           type: string
                       type: object
@@ -161,6 +171,9 @@ spec:
                 additionalProperties:
                   type: string
                 type: object
+              hash:
+                description: 用于对比workflow status是否有变化
+                type: string
               phase:
                 default: Pending
                 description: WorkflowPhase
@@ -172,12 +185,16 @@ spec:
                 - RollBacked
                 - Failed
                 type: string
+              rollbackError:
+                type: string
               runError:
                 type: string
               stepPhases:
                 additionalProperties:
                   type: integer
                 type: object
+              syncError:
+                type: string
             type: object
         type: object
     served: true

@@ -35,7 +35,7 @@ func (i *RetryableError) Run(workflow *v1alpha1.Workflow, step *v1alpha1.Step) s
 	id := fmt.Sprintf("%d", rand.Int())
 	if len(step.Status.Resource.ID) == 0 {
 		step.Status.Resource.ID = id
-		return stepinterface.NewCodeError("test", "first return error", true)
+		return stepinterface.NewCodeError("test", "first return error", true, false)
 	}
 	step.Status.Resource.ID = id
 	return nil

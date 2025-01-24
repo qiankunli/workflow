@@ -33,7 +33,14 @@ type WorkflowSpec struct {
 	RollbackPolicy RollbackPolicy `json:"rollbackPolicy,omitempty"`
 	// Map类型的数据
 	Parameters map[string]string `json:"parameters,omitempty"`
+	Callback   Callback          `json:"callback,omitempty"`
 	Steps      []WorkflowStep    `json:"steps,omitempty"`
+}
+
+type Callback struct { // 在workflow状态变更时发出回调
+	Url string `json:"url,omitempty"`
+	// +kubebuilder:default:=true
+	IgnoreNotFound bool `json:"ignoreNotFound,omitempty"`
 }
 
 type DependOn struct { // 描述该step 依赖其他step的情况
@@ -84,8 +91,12 @@ type WorkflowStatus struct {
 	Phase      WorkflowPhase     `json:"phase,omitempty"`
 	StepPhases map[StepPhase]int `json:"stepPhases,omitempty"`
 
-	Attributes map[string]string `json:"attributes,omitempty"`
-	RunError   string            `json:"runError,omitempty"`
+	Attributes    map[string]string `json:"attributes,omitempty"`
+	RunError      string            `json:"runError,omitempty"`
+	RollbackError string            `json:"rollbackError,omitempty"`
+	SyncError     string            `json:"syncError,omitempty"`
+	// 用于对比workflow status是否有变化
+	Hash string `json:"hash,omitempty"`
 }
 
 // Workflow is the Schema for the workflows API

@@ -41,7 +41,7 @@ func (i *Error) Run(workflow *v1alpha1.Workflow, step *v1alpha1.Step) stepinterf
 	id := fmt.Sprintf("%d", rand.Int())
 	if len(step.Status.Resource.ID) == 0 {
 		step.Status.Resource.ID = id
-		return stepinterface.NewCodeError("test", "run error", false)
+		return stepinterface.NewCodeError("test", "run error", false, false)
 	}
 	return nil
 }
@@ -53,7 +53,7 @@ func (i *Error) Rollback(workflow *v1alpha1.Workflow, step *v1alpha1.Step) stepi
 
 	time.Sleep(time.Duration(sleepSeconds) * time.Second)
 
-	return stepinterface.NewCodeError("test", "rollback error", false)
+	return stepinterface.NewCodeError("test", "rollback error", false, false)
 }
 
 func (i *Error) Sync(workflow *v1alpha1.Workflow, step *v1alpha1.Step) stepinterface.StepError {
