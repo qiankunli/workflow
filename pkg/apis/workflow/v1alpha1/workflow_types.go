@@ -27,11 +27,12 @@ import (
 type WorkflowSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
+	Queue string `json:"queue,omitempty"`
 	// +kubebuilder:default:=PreserveOnFailure
 	RollbackPolicy RollbackPolicy `json:"rollbackPolicy,omitempty"`
-
-	Steps []WorkflowStep `json:"steps,omitempty"`
+	// Map类型的数据
+	Parameters map[string]string `json:"parameters,omitempty"`
+	Steps      []WorkflowStep    `json:"steps,omitempty"`
 }
 
 type DependOn struct { // 描述该step 依赖其他step的情况
