@@ -17,6 +17,11 @@ workflow 是一个基于k8s crd 实现的工作流引擎，一个workflow 由多
 8. 支持多租户，每一个workflow 有一个spec.queue，支持不同queue之间的workflow公平消费
 9. 支持回调，当workflow 开始执行、执行成功、执行失败、step执行成功、失败时，可以通过回调url来通知业务方
 
+计划支持
+1. 定时任务抽象
+2. 单次任务抽象
+3. 成功或失败的workflow超过一定时间后，自动清理
+
 ## 安装
 
 调整manifest/workflow-controller/templates/configmap
@@ -71,6 +76,8 @@ type Step interface {
 
 
 ## workflow 定义
+
+业务方通过创建workflow 来驱动step 执行，workflow 执行成功后，需要用户手动删除。 
 
 workflow controller 将会
 1. 触发`step.Run` 当step上游的step 执行成功
