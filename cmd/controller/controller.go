@@ -4,11 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/qiankunli/workflow/pkg/apis/workflow/v1alpha1"
-	"github.com/qiankunli/workflow/pkg/controller/manager"
-	"github.com/qiankunli/workflow/pkg/controller/operators"
-	"github.com/qiankunli/workflow/pkg/options"
-	"github.com/qiankunli/workflow/pkg/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
@@ -18,6 +13,12 @@ import (
 	"k8s.io/klog/v2/klogr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+
+	"github.com/qiankunli/workflow/pkg/apis/workflow/v1alpha1"
+	"github.com/qiankunli/workflow/pkg/controller/manager"
+	"github.com/qiankunli/workflow/pkg/controller/operators"
+	"github.com/qiankunli/workflow/pkg/options"
+	"github.com/qiankunli/workflow/pkg/version"
 )
 
 const component = "controller"
@@ -103,18 +104,13 @@ func NewCommand(ctx context.Context, config *options.Config) *cobra.Command {
 }
 
 func setupReconcilers(mgr ctrl.Manager, controllerContext *manager.ControllerContext) error {
-	// syncer不受这些限速限制，100
-	if err := operators.RegisterStepReconciler(mgr, controllerContext, []string{"syncer"}, 100); err != nil {
-		return err
+	// register step controller
+	for _, stepConfig := range controllerContext.Config.ControllerConfig.Steps {
+		if err := operators.RegisterStepReconciler(mgr, controllerContext, stepConfig); err != nil {
+			return err
+		}
 	}
-	// 创建实例限速40，删除实例30
-	if err := operators.RegisterStepReconciler(mgr, controllerContext, []string{"instance", "shuttle", "empty", "error", "random", "retryable_error"}, 30); err != nil {
-		return err
-	}
-	// eip相关实例限速10
-	if err := operators.RegisterStepReconciler(mgr, controllerContext, []string{"eip", "associate_eip"}, 10); err != nil {
-		return err
-	}
+	// register workflow controller
 	if err := operators.RegisterWorkflowReconciler(mgr, controllerContext); err != nil {
 		return err
 	}
