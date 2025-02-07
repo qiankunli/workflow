@@ -15,6 +15,8 @@ Features
 8. Multi-Tenancy Support. Each workflow has a spec.queue, and workflows from different queues are processed fairly.
 9. Callback Support. Notifications can be sent to the business side via callback URLs when a workflow starts, succeeds, fails, or when a step succeeds or fails.
 
+![](design.png)
+
 ## Installation 
 
 configure `manifest/workflow-controller/templates/configmap`
