@@ -23,6 +23,8 @@ workflow 是一个基于k8s crd 实现的工作流引擎，一个workflow 由多
 3. 成功或失败的workflow超过一定时间后，自动清理
 4. 支持以某个image作为env启动一个pod 来执行某个step
 
+![](design.png)
+
 ## 安装
 
 调整manifest/workflow-controller/templates/configmap
